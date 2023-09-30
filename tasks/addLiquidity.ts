@@ -13,14 +13,21 @@ task("addLiquidity", "Adds liquidity to Uniswap V2")
     const Contract = await ethers.getContractFactory("AddLiquidity");
     const liquidityContract = Contract.attach(contract);
 
-    const contractTx: ContractTransaction = await liquidityContract.addLiquidity(tokenA, tokenB, amountA, amountB);
+    const contractTx: ContractTransaction = await liquidityContract.addLiquidity(tokenA, tokenB, amountA, amountB, {gasLimit: 6000000});
     const contractReceipt: ContractReceipt = await contractTx.wait();
     console.log("Liquidity added!");
-    const event = contractReceipt.events?.find(event => event.event === 'Mint');
-    const eInitiator: Address = event?.args!['sender'];
-    const amount0: BigNumber = event?.args!['amount0'];
-    const amount1: BigNumber = event?.args!['amount1'];            
+    const event = contractReceipt.events?.find(event => event.event === 'AddedLiquidity');
+    const eInitiator: Address = event?.args!['creator'];
+    const lpPair: Address = event?.args!['lpPair'];
+    const lptokenA: Address = event?.args!['tokenA'];
+    const lptokenB: Address = event?.args!['tokenB'];    
+    const lEvent = contractReceipt.events?.find(event => event.event == "Log");
+    const lValue = lEvent?.args!['val'];
 
     console.log(`Initiator: ${eInitiator}`);
-    console.log(`Added liquidity for ${amount0} ${tokenA} to ${amount1} ${tokenB}`)
+    console.log(`Liquidity value: ${lValue}`);
+    console.log(`liquidity Pair Address: ${lpPair}`);
+    console.log(
+      `Added liquidity for ERC20: ${lptokenA} amount: ${amountA} token(s) and ERC20: ${lptokenB} amount: ${amountB} token(s)`
+      );
   });

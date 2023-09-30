@@ -24,9 +24,6 @@ describe("AddLiquidity contract", function () {
         const SushiToken = await ethers.getContractFactory("SushiToken");
         tokenB = await SushiToken.deploy();
 
-        // const LiquidityContract = await ethers.getContractFactory(CONTRACT_NAME);
-        // addLiquidityContract = await LiquidityContract.deploy();
-
         [owner] = await ethers.getSigners();
 
         const addLiquidityFactory = (await ethers.getContractFactory(
@@ -67,24 +64,49 @@ describe("AddLiquidity contract", function () {
 
       describe("addLiquidity function", async () => {
 
-        it.only("should adds liquidity correctly", async () => {
-            const amountA = ethers.utils.parseEther("1")
-            const amountB = ethers.utils.parseEther("2")
+        it("should adds liquidity correctly", async () => {
+            const amountA = ethers.utils.parseEther("3");
+            const amountB = ethers.utils.parseEther("5");
 
-            await tokenA.approve(addLiquidityContract.address, amountA);
-            await tokenB.approve(addLiquidityContract.address, amountB);
-            const tx: ContractTransaction = await addLiquidityContract.addLiquidity(tokenA.address, tokenB.address, amountA, amountB);
-            const receipt: ContractReceipt = await tx.wait();
+            const tokenABalanceBefore = await tokenA.balanceOf(owner.address);
+            const tokenBBalanceBefore = await tokenB.balanceOf(owner.address);
+
+            await tokenA.connect(owner).approve(addLiquidityContract.address, amountA);
+            await tokenB.connect(owner).approve(addLiquidityContract.address, amountB);
+
+            let tx: ContractTransaction = 
+            await addLiquidityContract.connect(owner)
+            .addLiquidity(tokenA.address, tokenB.address, amountA, amountB)
+
+            let receipt: ContractReceipt = await tx.wait();
+
+            const tokenABalanceAfter = await tokenA.balanceOf(owner.address)
+            const tokenBBalanceAfter = await tokenB.balanceOf(owner.address)
+
+            const liquidityEvent = receipt.events?.find(event => event.event == "Log");
+            const liquidityValue = liquidityEvent?.args!['val'];
+
+            console.log(`Liquidity value: ${liquidityValue}`);
 
             const event = receipt.events?.find(event => event.event == "AddedLiquidity");
+            const lpCreator: Address = event?.args!['creator'];
             const lpAddress: Address = event?.args!['lpPair'];
+            const lptokenA: Address = event?.args!['tokenA'];
+            const lptokenB: Address = event?.args!['tokenB'];
 
-            console.log(`lpAddress: ${lpAddress}`);
+            console.log(`LP Address: ${lpAddress}`);
+
+            expect(tokenABalanceAfter).to.equal(tokenABalanceBefore.sub(amountA))
+            expect(tokenBBalanceAfter).to.equal(tokenBBalanceBefore.sub(amountB))
+
+            expect(tokenA.address).to.equal(lptokenA.toString());
+            expect(tokenB.address).to.equal(lptokenB.toString());
+
+            expect(lpCreator).to.equal(owner.address);
 
             await expect(tx)
               .to.emit(addLiquidityContract, "AddedLiquidity")
               .withArgs(tokenA.address, tokenB.address, owner.address, lpAddress);
-
             });
           });
          

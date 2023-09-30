@@ -83,6 +83,9 @@ const config: {} = {
   },
   networks: {
     hardhat: {
+      forking: {
+        url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+      },
       accounts: {
         mnemonic,
       },
